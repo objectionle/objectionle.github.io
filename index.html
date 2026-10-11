@@ -236,7 +236,7 @@ pre.dump{max-height:240px;overflow:auto;background:var(--bg);border:1px solid va
    ===================================================================== */
 
 /* ---------- 1. CONSTANTS ---------- */
-const APP_VERSION="2026.10.11-a";
+const APP_VERSION="2026.10.11-b";
 const CFG=(typeof window!=="undefined"&&window.OBJECTIONLE_CONFIG)||{};
 const MAX_GUESSES=6, PEN_WRONG=100, PEN_SKIP=50, PEN_HINT=25, DEFAULT_START=500, ROUNDS=5, DAILY_START=CFG.dailyStart||"2026-10-09";
 const T={OB:"Objection",HE:"Hearsay exception",HX:"Hearsay exclusion (not hearsay by definition)",NT:"Non-hearsay purpose",RS:"Response to an objection",FD:"Foundation requirement",PV:"Privilege",IM:"Impeachment technique",EX:"Examination technique",AD:"Admissibility doctrine",RM:"Request or step for the court"};
@@ -1011,16 +1011,16 @@ function toggleTheme(){
     setTimeout(()=>b.classList.remove("flick","flick-on","flick-off"),800);
   }else setTheme(next);
 }
-function barsHTML(c,mine){
+function barsHTML(c,mine,hideCounts){
   const tot=c.reduce((x,y)=>x+y,0),max=Math.max(1,...c);
   const row=(i,label)=>{const n=c[i],pct=tot?Math.round(n/tot*100):0;
-    return `<div class="bar-row${mine===i?" me":""}"><span class="bl">${label}</span><span class="bt"><i style="width:${n/max*100}%;background:${i?`var(--c${i})`:"var(--bad)"}"></i></span><span class="bn">${n} (${pct}%)${mine===i?" (you)":""}</span></div>`;};
+    return `<div class="bar-row${mine===i?" me":""}"><span class="bl">${label}</span><span class="bt"><i style="width:${n/max*100}%;background:${i?`var(--c${i})`:"var(--bad)"}"></i></span><span class="bn">${hideCounts?pct+"%":n+" ("+pct+"%)"}${mine===i?" (you)":""}</span></div>`;};
   return `<div class="bars" role="group" aria-label="Bar graph: how many solved at each clue">`+[1,2,3,4,5,6].map(i=>row(i,"Clue "+i)).join("")+row(0,"Missed")+`</div>`;
 }
 function paintComm(day){
   const b=$("#commbody");if(!b)return;
   const c=ui.comm[day],tot=c.reduce((x,y)=>x+y,0),solved=tot-c[0],m=store.daily.results[day];
-  b.innerHTML=`<p><b>${tot?Math.round(solved/tot*100):0}%</b> of ${fmt(tot)} player${tot===1?"":"s"} solved today’s Daily Objection.</p>${solved?`<p>On average, players solved it at clue <b>${(c.reduce((x,v,i)=>x+(i?i*v:0),0)/solved).toFixed(1)}</b>.</p>`:""}<p class="note">The clue each player solved it at:</p>`+barsHTML(c,m?(m.solved?m.clue:0):null);
+  b.innerHTML=`<p><b>${tot?Math.round(solved/tot*100):0}%</b> of players solved today’s Daily Objection.</p>${solved?`<p>On average, players solved it at clue <b>${(c.reduce((x,v,i)=>x+(i?i*v:0),0)/solved).toFixed(1)}</b>.</p>`:""}<p class="note">The clue each player solved it at:</p>`+barsHTML(c,m?(m.solved?m.clue:0):null,true);
 }
 async function loadCommunity(day){
   const b=()=>$("#commbody"),m=store.daily.results[day];
@@ -1094,7 +1094,7 @@ function playHTML(a){
   if(mode==="practice")h+=`<div class="diffrow"><label>Difficulty</label>${diffHTML()}</div>`;
   if(isR)h+=`<div class="rbar">${done?"":'<button class="btn link" data-act="restartround">Restart round</button>'}<button class="btn link" data-act="restartgame">Restart game</button></div>`;
   if(isR)h+=`<div class="stat"><div><small>Round</small><b>${a.idx+1} of ${a.queue.length}</b></div><div><small>Round points</small><b>${fmt(pts)}</b></div><div><small>Total so far</small><b>${fmt(total)}</b></div></div>`;
-  h+=`<div class="pl"><span>Clue ${c.revealed} of 6</span><span>${mode==="practice"?unused("practice").length+" unused at this level":""}</span></div>`;
+  h+=`<div class="pl"><span>Clue ${c.revealed} of 6</span><span></span></div>`;
   h+=`<div class="prog" aria-hidden="true">${[1,2,3,4,5,6].map(i=>`<i class="${i<=c.revealed?"on":""}"></i>`).join("")}</div>`;
   h+=`<ol class="clues" aria-label="Revealed clues">`+sit.clues.slice(0,c.revealed).map((t,i)=>`<li class="clue${i===c.revealed-1&&!done?" new":""}"><span class="n" aria-hidden="true">${i+1}</span><p><span style="position:absolute;left:-9999px">Clue ${i+1}. </span>${esc(t)}</p></li>`).join("")+`</ol>`;
   if(c.hints&&!done)h+=`<div class="hint" role="status"><b>Hint:</b> ${HINTTXT[hintCat(CONCEPTS[sit.c].type)]}</div>`;
@@ -1134,17 +1134,17 @@ function roundStartHTML(){
   const u=unused("round").length,st=DEFAULT_START;
   let h=`<h1>5-Round Game</h1><p class="sub">Five situations. Each round starts with its own points. Points left after a correct answer are yours. A failed round is worth zero.</p>`;
   h+=`<div class="diffrow"><label>Difficulty</label>${diffHTML()}</div>`;
-  h+=`<p class="note">Maximum score: ${fmt(st*5)}. Unused situations at this difficulty: ${u}.</p>`;
+  h+=`<p class="note">Maximum score: ${fmt(st*5)}.</p>`;
   if(u>=5)h+=`<div class="btns"><button class="btn primary" data-act="startround" data-n="5">Start Game</button></div>`;
   else{
-    h+=`<div class="card no"><p><b>${u===0?"You have completed every situation at this difficulty.":`Only ${u} unused situation${u>1?"s":""} remain${u===1?"s":""} at this difficulty.`}</b> Objectionle will not repeat situations without telling you. You can pick another difficulty above.</p><div class="btns">`;
-    if(u>0)h+=`<button class="btn primary" data-act="startround" data-n="${u}">Play the remaining ${u}</button>`;
+    h+=`<div class="card no"><p><b>${u===0?"You have completed every situation at this difficulty.":"Not enough new situations are left at this difficulty for a full game."}</b> Objectionle will not repeat situations without telling you. You can pick another difficulty above.</p><div class="btns">`;
+    if(u>0)h+=`<button class="btn primary" data-act="startround" data-n="${u}">Play the remaining ones</button>`;
     h+=`<button class="btn" data-act="resetdone">Reset completed situations and allow repeats</button></div></div>`;
   }
   return h;
 }
 function exhaustHTML(){
-  return `<h1>Free Play</h1><div class="diffrow"><label>Difficulty</label>${diffHTML()}</div><div class="card no"><p><b>No unused situations at this difficulty.</b> You have completed ${store.done.practice.length} of ${SITS.length} overall. Objectionle will not repeat situations unless you choose to.</p><div class="btns"><button class="btn primary" data-act="resetdone">Reset completed situations and allow repeats</button><button class="btn" data-act="nav" data-k="bank">Browse the Answer Bank</button></div></div>`;
+  return `<h1>Free Play</h1><div class="diffrow"><label>Difficulty</label>${diffHTML()}</div><div class="card no"><p><b>No unused situations at this difficulty.</b> Objectionle will not repeat situations unless you choose to.</p><div class="btns"><button class="btn primary" data-act="resetdone">Reset completed situations and allow repeats</button><button class="btn" data-act="nav" data-k="bank">Browse the Answer Bank</button></div></div>`;
 }
 function perfLine(p){return p>=.85?"Excellent. You read these facts like a seasoned advocate.":p>=.6?"Solid work. Review the cards for the ones that got away.":p>=.3?"Getting there. The answer cards explain each rule briefly.":"Keep practicing. Practice mode costs nothing and teaches the same rules.";}
 function finalHTML(a){
@@ -1347,6 +1347,8 @@ function runTests(){
   t("admin panel stays locked without a code",()=>{const keep=[adm.code,adm.data];adm.code=null;adm.data=null;const h=adminHTML();adm.code=keep[0];adm.data=keep[1];return (h.includes("Locked")&&!h.includes("Visitors and players"))||"not locked";});
   t("situations and concepts meet the content targets",()=>SITS.length>=200&&Object.keys(CONCEPTS).length>=100);
   [["molineux","molineux"],["sandoval","sandoval"],["unfair extrapolation","unfair-extrapolation"],["motion in limine","motion-in-limine"],["goes to weight","weight-not-admissibility"],["psychologist privilege","psychologist"],["omission","impeach-omission"],["is he lying","credibility-opinion"],["specific instances character","character-method"],["613(b)","pis-foundation"]].forEach(([q,id])=>t("search “"+q+"” → "+id,()=>top(q)===id||"got "+top(q)));
+  t("daily graph for players shows percentages only",()=>{const h=barsHTML([1,0,2,0,0,0,0],2,true);return /50%/.test(h)&&!/\d+ \(\d+%\)/.test(h)&&barsHTML([1,0,2,0,0,0,0],2,false).includes("2 (67%)");});
+  t("player screens never print counts of unused situations",()=>{const keep=[store,mode,view];store=defaultStore();view="game";mode="practice";const a=gameHTML();mode="round";const b=gameHTML();store=keep[0];mode=keep[1];view=keep[2];return !/\d+ unused|unused situations at this difficulty: \d|\bof \d+ overall|remaining \d|remain(s)? at this difficulty/i.test(a+b)||"count shown";});
   return R;
 }
 if(typeof document!=="undefined")init();
